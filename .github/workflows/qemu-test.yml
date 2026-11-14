@@ -1,0 +1,30 @@
+
+name: QEMU Boot Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  boot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86
+
+      - name: Build OS
+        run: make
+
+      - name: Boot test
+        run: |
+          timeout 15s qemu-system-x86_64 \
+            -cdrom build/myos.iso \
+            -display none \
+            -serial stdio \
+            -no-reboot || test $? -eq 124
+
