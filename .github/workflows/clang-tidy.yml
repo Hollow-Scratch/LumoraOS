@@ -1,0 +1,27 @@
+
+name: Clang-Tidy
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-tidy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy bear
+
+      - name: Generate compilation database
+        run: bear -- make clean all
+
+      - name: Analyze kernel
+        run: |
+          find kernel -type f -name '*.cpp' -print0 |
+          xargs -0 -r clang-tidy -p .
+
