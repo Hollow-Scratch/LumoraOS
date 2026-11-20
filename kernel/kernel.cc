@@ -1,12 +1,20 @@
+#include "gdt.h"
 #include "limine_requests.h"
 #include <cstddef>
-#include <cstdint>
+// Halt and catch fire function
 
-// Set the base revision to 6, this is recommended as this is the latest base
-// revision described by the Limine boot protocol specification. See
-// specification for further info.
+static inline void outb(std::uint16_t port, std::uint8_t value) {
+  asm volatile("outb %0, %1" : : "a"(value), "Nd"(port));
+}
 
-// Halt and catch fire function.
+void debug_putc(char c) { outb(0xE9, static_cast<std::uint8_t>(c)); }
+
+void debug_print(const char *str) {
+  for (std::size_t i = 0; str[i] != '\0'; i++) {
+    debug_putc(str[i]);
+  }
+}
+
 namespace {
 
 [[noreturn]] void hcf() {
@@ -107,6 +115,10 @@ extern "C" void kmain() {
     (*--ctor)();
   }
 
+  debug_print("initialising GDT :)");
+  Lumora::X86_64::GDT::Init();
+  debug_print("GDT done!");
+
   // Ensure we got a framebuffer.
   if (framebuffer_request.response == nullptr ||
       framebuffer_request.response->framebuffer_count < 1) {
@@ -128,7 +140,7 @@ extern "C" void kmain() {
 
     fb_pattern(framebuffer);
   }
-
+  debug_print("dawdaw");
   // We're done, just hang...
   hcf();
 }

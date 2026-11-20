@@ -47,4 +47,16 @@ void __ubsan_handle_nonnull_return_v1(void *, void *) {
 void __ubsan_handle_builtin_unreachable(void *) {
   ubsan_panic("UBSan: unreachable");
 }
+
+void __ubsan_handle_function_type_mismatch(void *data, void *fn) {
+  (void)data;
+  (void)fn;
+  ubsan_panic("function type mismatch");
+}
+
+void __ubsan_handle_function_type_mismatch_abort(void *data, void *fn) {
+  (void)data;
+  (void)fn;
+  ubsan_panic("function type mismatch");
+}
 }

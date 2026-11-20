@@ -4,7 +4,6 @@ Checks: >
   bugprone-*,
   performance-*,
   readability-*,
-  modernize-*,
   portability-*,
   clang-analyzer-*,
   -modernize-use-trailing-return-type,

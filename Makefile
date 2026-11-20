@@ -1,4 +1,5 @@
 CXX := g++
+AS := nasm
 LD := ld
 
 ARCH := x86-64
@@ -9,18 +10,25 @@ ISO_DIR := iso
 LIMINE_DIR := limine-binary
 LIMINE_TAR := limine-binary.tar.gz
 
-KERNEL_SRC := kernel/kernel.cc kernel/ubsan.cc
+KERNEL_SRC := kernel/kernel.cc kernel/ubsan.cc kernel/gdt.cc
 KERNEL_OBJ := $(patsubst kernel/%.cc,$(BUILD_DIR)/%.o,$(KERNEL_SRC))
+
+ASM_SRC := kernel/gdt.asm
+ASM_OBJ := $(patsubst kernel/%.asm,$(BUILD_DIR)/%.asm.o,$(ASM_SRC))
+ALL_OBJ := $(KERNEL_OBJ) $(ASM_OBJ)
+
 KERNEL_ELF := $(BUILD_DIR)/kernel.elf
 ISO_IMAGE := $(BUILD_DIR)/$(IMAGE_NAME).iso
 
 CXXFLAGS := -std=c++20 -O2 -Wall -Wextra \
     -ffreestanding -fno-exceptions -fno-rtti \
-	-fsanitize=undefined -fno-sanitize=vptr \
+    -fsanitize=undefined -fno-sanitize=vptr \
     -march=x86-64 -mno-red-zone \
     -mno-sse -mno-sse2 -mno-mmx \
     -mcmodel=kernel -fno-stack-protector \
     -fno-pic -fno-pie -Ikernel
+
+ASFLAGS := -f elf64
 
 LDFLAGS := -nostdlib -static \
     -z max-page-size=0x1000 -T linker.lds
@@ -31,7 +39,7 @@ all: kernel
 
 # Fetch Limine bootloader binaries
 $(LIMINE_TAR):
-	curl -fL -o $@ https://github.com/limine-bootloader/limine/releases/latest/download/limine-binary.tar.gz
+	curl -fL -o $@ https://github.com
 
 $(LIMINE_DIR)/limine.c: $(LIMINE_TAR)
 	rm -rf $(LIMINE_DIR)
@@ -45,12 +53,14 @@ kernel: $(KERNEL_ELF)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-
 $(BUILD_DIR)/%.o: kernel/%.cc | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(KERNEL_ELF): $(KERNEL_OBJ) linker.lds
-	$(LD) $(LDFLAGS) $(KERNEL_OBJ) -o $@
+$(BUILD_DIR)/%.asm.o: kernel/%.asm | $(BUILD_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
+
+$(KERNEL_ELF): $(ALL_OBJ) linker.lds
+	$(LD) $(LDFLAGS) $(ALL_OBJ) -o $@
 
 # Create ISO and run QEMU
 run: kernel $(LIMINE_DIR)/limine.c
@@ -75,7 +85,7 @@ run: kernel $(LIMINE_DIR)/limine.c
 	    $(ISO_DIR)/ \
 	    -o $(ISO_IMAGE)
 
-	qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -cdrom $(ISO_IMAGE) -m 512M -boot d
+	qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -cdrom $(ISO_IMAGE) -m 512M -boot d -debugcon stdio
 
 # Clean build artifacts (keeps downloaded Limine archive)
 clean:
